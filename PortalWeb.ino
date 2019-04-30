@@ -35,7 +35,7 @@
 // D7 (RX) and D8 (TX) on WeMOS D1 MINI.
 #define PORTAL_UART Serial
 
-#define MAX_BANK_NAME_LEN 50
+#define MAX_BANK_NAME_LEN 100
 
 uint32 spi_flash_get_id();
 
@@ -443,7 +443,7 @@ void getBankInfo() {
   int count = optionalIntArg("count", 1);
   String *imgdir = optionalStrArg("imgdir", "");
   if (banknum + count > (maxBank + 1)) { count = maxBank - banknum + 1; }
-  int jsonCapacity = JSON_ARRAY_SIZE(count) + MAX_BANK_NAME_LEN*count + JSON_ARRAY_SIZE(3)*count + 16*count + 2*count; // allows 50 chars per name, 16 chars per UID
+  int jsonCapacity = JSON_ARRAY_SIZE(count) + MAX_BANK_NAME_LEN*count + JSON_ARRAY_SIZE(3)*count + 16*count + 2*count; // allows MAX_BANK_NAME_LEN chars per name, 16 chars per UID
   DynamicJsonDocument doc(jsonCapacity);
 
   int endbank = banknum + count;
@@ -497,7 +497,6 @@ void getBankInfo() {
 
 void setup ( void ) {
 	DBG_OUTPUT_PORT.begin ( 115200 );
-/*	WiFi.begin ( ssid, password ); */
 	DEBUG_LINE ( "" );
 
   PORTAL_UART.begin( 115200 );
@@ -554,13 +553,6 @@ void setup ( void ) {
   server.on ( "/clearslot", clearSlot );  
   server.on ( "/banknames", getBankNames );
   server.on ( "/bankinfo", getBankInfo );
-
-  // Web app layout:
-  // will want mode + modeswitch.
-  // Then some sort of box per slot, tap to choose item to put in there.  maybe type to search etc.
-  // prob divide banks into hierarchy of name, and remember where we were last time (like file browser dialog)
-  // Periodic polling of slot contents so we can keep up with the manual buttons.
-  // And ultimately, some way to do images.
 
   //called when the url is not defined here
   //use it to load content from SPIFFS
