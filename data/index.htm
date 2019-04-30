@@ -261,6 +261,7 @@ XXX Requires license statement / acknowledgements
         App.sendRequest('setportalmode?mode=' + mode);
         // Interrupt any in-progress name fetch
         this.stopBankNames = true;
+        this.mode = mode;
         // Start fetching the names again
         window.setTimeout(this.populateBankNames, 2000);
       };
