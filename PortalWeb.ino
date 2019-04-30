@@ -35,10 +35,6 @@
 // D7 (RX) and D8 (TX) on WeMOS D1 MINI.
 #define PORTAL_UART Serial
 
-// Labelled D2 on a WeMOS D1 MINI
-// XXX Probably not required any more.
-#define RESET_PIN 4
-
 #define MAX_BANK_NAME_LEN 50
 
 uint32 spi_flash_get_id();
@@ -224,21 +220,6 @@ String *optionalStrArg(const char* name, const char* defaultVal) {
   }
 
   return retval;
-}
-
-// Drive a named pin low for holdTime mS.
-void pulsePin(int pinNum, int holdTime) {
-  pinMode(pinNum, OUTPUT);
-  digitalWrite(pinNum, LOW);
-  delay(50);
-  digitalWrite(pinNum, HIGH);
-  delay(1);
-  pinMode(pinNum, INPUT);
-}
-
-// Drive a named pin low for 50mS
-void pulsePin50(int pinNum) {
-  pulsePin(pinNum, 50);  
 }
 
 String* readPortal() {
@@ -515,8 +496,6 @@ void getBankInfo() {
 }
 
 void setup ( void ) {
-  pinMode(RESET_PIN, INPUT);
-  
 	DBG_OUTPUT_PORT.begin ( 115200 );
 /*	WiFi.begin ( ssid, password ); */
 	DEBUG_LINE ( "" );
@@ -545,7 +524,6 @@ void setup ( void ) {
   });
 
   persWM.setApCredentials(DEVICE_NAME);
-//  persWM.resetSettings();
   persWM.setConnectNonBlock(true);
   persWM.begin();
   
@@ -595,9 +573,6 @@ void setup ( void ) {
 	DEBUG_LINE ( "HTTP server started" );
 
   DEBUG_LINE ( WiFi.localIP() );
-
-  // Apparently startup UART noise can upset the portal?  Send a reset to make sure it's happy
-  pulsePin50(RESET_PIN);
 }
 
 void loop ( void ) {
