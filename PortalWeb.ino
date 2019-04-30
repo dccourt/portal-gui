@@ -1,7 +1,8 @@
 /*
  * XXX license etc.
  *
-// XXX MUST UPLOAD THIS TO A MODULE WITH AT LEAST 1M FLASH.  Designed for WeMOS D1 Mini.
+// XXX MUST UPLOAD THIS TO A MODULE WITH AT LEAST 1M FLASH.  Designed for WeMOS D1 Mini with at least 4M flash,
+// organised as 1M code + 3M SPIFFS.
  *
  */
 
@@ -48,6 +49,11 @@ PersWiFiManager persWM(server, dnsServer);
 
 //holds the current upload
 File fsUploadFile;
+
+// Allow reasonable default maxima - we'll actually dynamically 
+// determine these over time.
+int currNumSlots = 9;
+int currNumBanks = 1000;
 
 #define DEBUG_LINE(A) DBG_OUTPUT_PORT.println(A)
 #define DEBUG(A) DBG_OUTPUT_PORT.print(A)
@@ -289,9 +295,8 @@ void setPortalMode() {
 
 // ARGS: targetslot
 void clearSlot() {
-  // XXX dynamic max
-  int slotnum = mandatoryIntArg("targetslot", 0, 5);
-  if (slotnum < 0) return;
+  int slotnum = mandatoryIntArg("targetslot", 1, currNumSlots);
+  if (slotnum < 1) return;
 
   String cmd = String("AT+SLOT=") + slotnum + ",0";
   String *resp = sendPortalCommand(cmd);  
@@ -360,17 +365,17 @@ void querySlots() {
 int getNumBanks() {
   String *resp = sendPortalCommand("AT+BANKCOUNT?");
   String numPart = resp->substring(12);
-  int retval = numPart.toInt();
+  currNumBanks = numPart.toInt();
   delete resp;
-  return retval;
+  return currNumBanks;
 }
 
 int getNumSlots() {
   String *resp = sendPortalCommand("AT+SLOTCOUNT?");
   String numPart = resp->substring(12);
-  int retval = numPart.toInt();
+  currNumSlots = numPart.toInt();
   delete resp;
-  return retval;
+  return currNumSlots;
 }
 
 // Gets various info about global state.
@@ -405,11 +410,10 @@ void queryState() {
 
 // ARGS: banknum, targetslot
 void selectBank() {
-  // XXX Should be dynamic maxes
-  int banknum = mandatoryIntArg("banknum", 0, 500);
-  if (banknum < 0) return;
-  int slotnum = mandatoryIntArg("targetslot", 0, 5);
-  if (slotnum < 0) return;
+  int banknum = mandatoryIntArg("banknum", 1, currNumBanks);
+  if (banknum < 1) return;
+  int slotnum = mandatoryIntArg("targetslot", 1, currNumSlots);
+  if (slotnum < 1) return;
 
   String cmd = String("AT+SLOT=") + slotnum + "," + banknum;
   String *resp = sendPortalCommand(cmd);
