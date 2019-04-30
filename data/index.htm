@@ -1,7 +1,7 @@
 <!--
 NFC Portal controller
 
-XXX Requires license statement / acknowledgements
+XXX Requires license etc.
 -->
 <!DOCTYPE html>
 <html>
@@ -12,6 +12,84 @@ XXX Requires license statement / acknowledgements
   <script type="text/javascript" src="jquery-3.4.0.min.js"></script>
   <script type="text/javascript">
 
+    // Methods for updating the displayed UI.
+    var UI = (function() {
+      this.showMode = function(newMode) {
+        $('.modeIcon').removeClass('active').addClass('inactive');
+        $('.modeIcon#modeicon' + newMode).removeClass('inactive').addClass('active');
+        $('#modeData').html(Portal.mode);
+      };
+
+      this.showVersion = function(version) {
+        $('#versionData').html(version);
+      };
+
+      this.showBankCount = function(numbanks) {
+        $('#bankData').html(numbanks);
+      };
+
+      this.showSlotContents = function(slotarray) {
+        // We expect an array of ints indicating bank IDs.
+        // 0 indicates empty.
+        // We build up an array of <div.slotContent> objects, then 
+        // stick them into <div.slotContents>, replacing existing content.
+        var contents = "";
+        var slotNum = 1;
+        slotarray.forEach(function(item) {
+          var displayText = "<span class='emptySlot'>+</span>";
+          if (item != 0) {
+            if (item in this.bankNames) {
+              var bankName = bankNames[item];
+              // Just show final part of name
+              var parts = bankName.split('~');
+              displayText = parts.pop();
+              // displayText = bankName.replace(/\~/g, '<br/>');
+              var bankInfo = this.bankInfo[bankName];
+              if (bankInfo[1]) {
+                // We have an image available.
+                displayText = "<img src='/images/" + Portal.IMG_DIR[Portal.mode] + "/" + bankInfo[0] + ".jpg'>" + displayText;
+              }
+            } else {
+              displayText = 'Bank ' + item;
+            }
+          }
+          var div = "<div class='slotContent' id='slot" + slotNum + "' data-slotnum='" + slotNum + "'>" + displayText + "</div>";
+          contents += div;
+          slotNum ++;
+        });
+        $('#slotContents').html(contents);
+        $('.slotContent').click(function(event) {
+          var target = event.target;
+          var slotnum = null;
+          do {
+            slotnum = target.getAttribute('data-slotnum');
+            console.log(slotnum);
+            target = target.parentNode;
+          } while ((slotnum === null) &&
+                   (typeof target !== 'undefined'));
+          openChooser(slotnum);
+        });
+      };
+
+      this.showBanksLoaded = function(numloaded) {
+        $('#banksLoaded').html(numloaded);
+      };
+
+      this.showBankChooser = function() {
+        $('#bankchooser').iziModal('open');
+      };
+
+      this.hideBankChooser = function() {
+        $('#bankchooser').iziModal('close');
+      };
+
+      this.showCurrentChooserSlot = function(slotnum) {
+        $('#slotNum').html(slotnum);
+      };
+
+      return this;
+    }());
+    
     var Portal = (function() {
       // Constants ----------------
       this.MODE_UNKNOWN = 0;
@@ -53,84 +131,51 @@ XXX Requires license statement / acknowledgements
       // Map from bank name to [UID, gotimg]
       this.bankInfo = {};
   
-    // Methods ------------------
-    // Sometimes we get presented with a JSON string literal rather 
-    // than JSON object.  Force to object.
-    this.forceJSON = function(jsonData) {
-        console.log(jsonData);
-        console.log(typeof jsonData);
-        if (typeof jsonData !== 'object') {
-          jsonData = JSON.parse(jsonData);
-        }
-        return jsonData;
-    }
+      // Methods ------------------
+      // Sometimes we get presented with a JSON string literal rather 
+      // than JSON object.  Force to object.
+      this.forceJSON = function(jsonData) {
+          console.log(jsonData);
+          console.log(typeof jsonData);
+          if (typeof jsonData !== 'object') {
+            jsonData = JSON.parse(jsonData);
+          }
+          return jsonData;
+      }
     
-    // Respond to JSON object describing current state.
+      // Respond to JSON object describing current state.
       this.updateState = function(jsonData) {
         jsonData = this.forceJSON(jsonData);
         if ('version' in jsonData) {
           Portal.version = jsonData['version'];
-          $('#versionData').html(Portal.version);
+          UI.showVersion(Portal.version);
+          var newMode = Portal.MODE_UNKNOWN;
           if (Portal.version.indexOf("Skylanders") != -1) {
-            Portal.mode = Portal.MODE_SKYLANDERS;
+            newMode = Portal.MODE_SKYLANDERS;
           } else if (Portal.version.indexOf("LEGO") != -1) {
-            Portal.mode = Portal.MODE_LEGO;
+            newMode = Portal.MODE_LEGO;
           } else if (Portal.version.indexOf("Disney") != -1) {
-            Portal.mode = Portal.MODE_DISNEY;
+            newMode = Portal.MODE_DISNEY;
           } else {
-            Portal.mode = Portal.MODE_UNKNOWN;    
+            newMode = Portal.MODE_UNKNOWN;    
           }
-          $('#modeData').html(Portal.mode);
+          console.log("Curr mode:" + newMode);
+          if (newMode != Portal.mode) {
+            console.log("Differs from old mode");
+            Portal.mode = newMode;
+            UI.showMode(newMode);
+          }
         }
         if ('numbanks' in jsonData) {
           Portal.numbanks = jsonData['numbanks'];
-          $('#bankData').html(Portal.numbanks);
+          UI.showBankCount(Portal.numbanks);
         }
         if ('numslots' in jsonData) {
           Portal.numslots = jsonData['numslots'];
           // No immediate external display of slot count.
         }
         if ('slotcontents' in jsonData) {
-        // We expect an array of ints indicating bank IDs.
-        // 0 indicates empty.
-        // We build up an array of <div.slotContent> objects, then 
-        // stick them into <div.slotContents>, replacing existing content.
-        var contents = "";
-        var slotNum = 1;
-        jsonData['slotcontents'].forEach(function(item) {
-          var displayText = "<span class='emptySlot'>+</span>";
-          if (item != 0) {
-            if (item in this.bankNames) {
-              var bankName = bankNames[item];
-              // Just show final part of name
-              var parts = bankName.split('~');
-              displayText = parts.pop();
-              // displayText = bankName.replace(/\~/g, '<br/>');
-              var bankInfo = this.bankInfo[bankName];
-              if (bankInfo[1]) {
-                // We have an image available.
-                displayText = "<img src='/images/" + Portal.IMG_DIR[Portal.mode] + "/" + bankInfo[0] + ".jpg'>" + displayText;
-              }
-            } else {
-              displayText = 'Bank ' + item;
-            }
-          }
-          var div = "<div class='slotContent' id='slot" + slotNum + "' data-slotnum='" + slotNum + "'>" + displayText + "</div>";
-          contents += div;
-          slotNum ++;
-        });
-        $('#slotContents').html(contents);
-        $('.slotContent').click(function(event) {
-          var target = event.target;
-          var slotnum = null;
-          do {
-            slotnum = target.getAttribute('data-slotnum');
-            console.log(slotnum);
-            target = target.parentNode;
-          } while ((slotnum === null) &&
-                   (typeof target !== 'undefined'));
-          openChooser(slotnum);
-        });
+          UI.showSlotContents(jsonData['slotcontents']);
         }
       };
       
@@ -178,7 +223,7 @@ XXX Requires license statement / acknowledgements
             window.localStorage.setItem(baseCacheKey+startbank, JSON.stringify(item));
             startbank ++;
           });
-          $('#banksLoaded').html(startbank - 1);
+          UI.showBanksLoaded(startbank - 1);
           if (getMore && !Portal.stopBankNames && (startbank < this.numbanks)) {
             bankNameHandle = window.setTimeout(function() { this.getBankNames(startbank, count, true); }, 10 );
           }
@@ -211,7 +256,7 @@ XXX Requires license statement / acknowledgements
               ii++;
             }
           } while (readInfo);
-          $('#banksLoaded').html(ii - 1);
+          UI.showBanksLoaded(ii - 1);
         }
         return gotCache;
       };
@@ -262,6 +307,7 @@ XXX Requires license statement / acknowledgements
         // Interrupt any in-progress name fetch
         this.stopBankNames = true;
         this.mode = mode;
+        UI.showMode(mode);
         // Start fetching the names again
         window.setTimeout(this.populateBankNames, 2000);
       };
@@ -381,12 +427,12 @@ XXX Requires license statement / acknowledgements
           // They've selected a leaf in the tree - which has 
           // resolved to a bank number.  Put it in the slot.
           Portal.setSlot(App.chooserSlot, tree);
-          $('#bankchooser').iziModal('close');
+          UI.hideBankChooser();
         }
       };
 
       this.openChooser = function(slotnum) {
-        $('#slotNum').html(slotnum);
+        UI.showCurrentChooserSlot(slotnum);
 
         // Populate the list of options.  If we've not opened this
         // dialog before then we start with the top-level items
@@ -397,22 +443,23 @@ XXX Requires license statement / acknowledgements
         populateOptions(this.getCurrentTree());
         this.chooserSlot = slotnum;
 
-        $('#bankchooser').iziModal('open');
+        UI.showBankChooser();
       };
 
       this.clearCurrentSlot = function() {
         Portal.clearSlot(this.chooserSlot);
-        $('#bankchooser').iziModal('close');
+        UI.hideBankChooser();
       };
 
       return this;
     }());
-    
+
     $(document).ready(function() {
       // Update state immediately, then background poll regularly.
-      Portal.pollState();
       // Once first poll is successful, we'll start querying for bank info.
-      // Portal.startFetchingBankNames();
+      Portal.pollState();
+      
+      // Prepare modal dialog.
       $('.modalContent').iziModal();
     });
     
@@ -438,12 +485,36 @@ span.emptySlot {
   list-style: none;
   padding-bottom: 5px;
 }
+.modesWrapper {
+  display: block;
+  width: 100%;
+}
+.modeIcon {
+  display: inline-block;
+  width: 30%;
+  margin: 1%;
+}
+.inactive {
+  filter: grayscale(100%) contrast(10%) brightness(200%);
+}
+.active {
+  border: 1px solid red;
+}
   </style>
 </head>
 <body id="index" style="margin:5px; padding:0; font-family:sans-serif;">
 
-<p>Portal: <span id="versionData" class="portal-data">Unknown</span>.  Mode: <span id="modeData" class="portal-data">Unknown</span>.  Loaded <span id="banksLoaded" class="portal-data">0</span> / <span id="bankData" class="portal-data">Unknown</span> figure names. (<a href='#' onclick="javascript:Portal.startFetchingBankNames();">Force refresh</a>)
+<p>Portal status:
+<div class='modesWrapper'>
+  <img class='modeIcon inactive' id='modeicon1' onclick='javascript:Portal.setPortalMode(Portal.MODE_DISNEY);' src='images/logo_disney.png'>
+  <img class='modeIcon inactive' id='modeicon2' onclick='javascript:Portal.setPortalMode(Portal.MODE_LEGO);' src='images/logo_lego.png'>
+  <img class='modeIcon inactive' id='modeicon3' onclick='javascript:Portal.setPortalMode(Portal.MODE_SKYLANDERS);' src='images/logo_skylanders.png'>
+</div>
+<p>Version: <span id="versionData" class="portal-data">Unknown</span>
+<p>Loaded <span id="banksLoaded" class="portal-data">0</span> / <span id="bankData" class="portal-data">Unknown</span> figure names. (<a href='#' onclick="javascript:Portal.startFetchingBankNames();">Force refresh</a>)
 </p>
+
+<hr>
 
 <h1>Figures present:</h1>
 <div id="slotContents">
@@ -452,11 +523,6 @@ span.emptySlot {
 
 <p>Ideally an image plus text underneath (or maybe even drawn over).  Tap/click on a slot to change its contents.
 <hr>
-
-<h1>Set portal mode</h1>
-<a href='#' onclick="javascript:Portal.setPortalMode(Portal.MODE_LEGO);">Lego</a>
-<a href='#' onclick="javascript:Portal.setPortalMode(Portal.MODE_DISNEY);">Disney</a>
-<a href='#' onclick="javascript:Portal.setPortalMode(Portal.MODE_SKYLANDERS);">Skylanders</a>
 
 <h1>Query state</h1>
 <a href='#' id='globalStateBtn' onclick="javascript:App.sendRequest('querystate', Portal.updateState);">Global state</a>
