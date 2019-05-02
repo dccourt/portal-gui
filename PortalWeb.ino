@@ -434,7 +434,7 @@ void getBankNames() {
 }
 
 // Get the info of one or more banks.
-// Returned as a JSON array of arrays : the sub-arrays contain name + UID + whether we have an image for this UID (1 or 0)
+// Returned as a JSON array of arrays : the sub-arrays contain name + UID + L/E/M data + whether we have an image for this UID (1 or 0)
 // ARGS: startbank, imgdir (which dir to look for images in - optional), count (optional, default=1)
 void getBankInfo() {
   int maxBank = getNumBanks();  
@@ -443,27 +443,40 @@ void getBankInfo() {
   int count = optionalIntArg("count", 1);
   String *imgdir = optionalStrArg("imgdir", "");
   if (banknum + count > (maxBank + 1)) { count = maxBank - banknum + 1; }
-  int jsonCapacity = JSON_ARRAY_SIZE(count) + MAX_BANK_NAME_LEN*count + JSON_ARRAY_SIZE(3)*count + 16*count + 2*count; // allows MAX_BANK_NAME_LEN chars per name, 16 chars per UID
+  int jsonCapacity = JSON_ARRAY_SIZE(count) + MAX_BANK_NAME_LEN*count + JSON_ARRAY_SIZE(4)*count + 16*count + 20*count + 2*count; // allows MAX_BANK_NAME_LEN chars per name, 16 chars per UID, 20 chars L/E/M data
   DynamicJsonDocument doc(jsonCapacity);
 
   int endbank = banknum + count;
   for (int ii = banknum; ii < endbank; ii++) {
-    String cmd = String("AT+BANKINFO=") + ii + ",3";
+    String cmd = String("AT+BANKINFO=") + ii + ",255";
     String *resp = sendPortalCommand(cmd);
 
     // Need to find the double-quote delimited values in the response.
     String namepart = "";
     String uidpart = "";
+    String lempart = "";
     int len = resp->length();
     String *currStr = &namepart;
     bool inQuotes = false;
+    int partnum = 0;
     for (int jj=0; jj < len; jj++)
     {
       char ch = resp->charAt(jj);
       if (ch == '"') {
         if (inQuotes) {
-          // Just finished the first value.  Get ready to grab the 2nd.
-          currStr = &uidpart;
+          // Just finished a value.  Get ready to grab the next.
+          partnum++;
+          switch(partnum) {
+            case 1:
+              currStr = &uidpart;
+              break;
+            case 2:
+              currStr = &lempart;
+              break;
+            default:
+              DEBUG_LINE("ERR: Too many parts");
+              break;
+          }
         }
         inQuotes = !inQuotes;
       } else if (inQuotes) {
@@ -474,6 +487,7 @@ void getBankInfo() {
     JsonArray innerdoc = doc.createNestedArray();  // Automatically adds to doc.
     innerdoc.add(namepart);
     innerdoc.add(uidpart);
+    innerdoc.add(lempart);
     int gotImg = 0;
     if (imgdir->length() > 0) {
       String imgpath = String("/images/") + *imgdir + '/' + uidpart + ".jpg";
@@ -496,8 +510,8 @@ void getBankInfo() {
 }
 
 void setup ( void ) {
-	DBG_OUTPUT_PORT.begin ( 115200 );
-	DEBUG_LINE ( "" );
+  DBG_OUTPUT_PORT.begin ( 115200 );
+  DEBUG_LINE ( "" );
 
   PORTAL_UART.begin( 115200 );
   PORTAL_UART.swap();
@@ -544,7 +558,6 @@ void setup ( void ) {
   server.on("/edit", HTTP_POST, [](){ server.send(200, "text/plain", ""); }, handleFileUpload);
 
   // ----- Portal interaction
-  // Fully working:
   server.on ( "/setportalmode", setPortalMode );
   server.on ( "/literal", sendLiteral );
   server.on ( "/selectbank", selectBank );
@@ -554,6 +567,13 @@ void setup ( void ) {
   server.on ( "/banknames", getBankNames );
   server.on ( "/bankinfo", getBankInfo );
 
+  // Everything under /images is static content that we allow
+  // to be cached by the browser - the WebServer class can
+  // handle all that for us transparently.
+  server.serveStatic("/images", SPIFFS, "/images", "max-age=86400");
+  // And general static content
+  server.serveStatic("/static", SPIFFS, "/static", "max-age=86400");
+
   //called when the url is not defined here
   //use it to load content from SPIFFS
   server.onNotFound([](){
@@ -561,14 +581,14 @@ void setup ( void ) {
       server.send(404, "text/plain", "FileNotFound");
   });
 
-	server.begin();
-	DEBUG_LINE ( "HTTP server started" );
+  server.begin();
+  DEBUG_LINE ( "HTTP server started" );
 
   DEBUG_LINE ( WiFi.localIP() );
 }
 
 void loop ( void ) {
   persWM.handleWiFi();
-	server.handleClient();
+  server.handleClient();
   dnsServer.processNextRequest();
 }
