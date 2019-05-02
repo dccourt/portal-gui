@@ -46,6 +46,10 @@ XXX Requires license etc.
               // displayText = bankName.replace(/\~/g, '<br/>');
               var bankInfo = this.bankInfo[bankName];
               if (bankInfo[1]) {
+                // We have LEM data available.  For now, just display under the text.
+                displayText = displayText + "<br/>" + bankInfo[1].replace(/\~/g, ' ');
+              }
+              if (bankInfo[2]) {
                 // We have an image available.
                 displayText = "<img src='/images/" + Portal.IMG_DIR[Portal.mode] + "/" + bankInfo[0] + ".jpg'>" + displayText;
               }
@@ -128,7 +132,7 @@ XXX Requires license etc.
       //   }
       // }
       this.bankNameTree = {};
-      // Map from bank name to [UID, gotimg]
+      // Map from bank name to [UID, LEM, gotimg]
       this.bankInfo = {};
   
       // Methods ------------------
@@ -208,7 +212,7 @@ XXX Requires license etc.
         item = forceJSON(item);
         this.bankNames[banknum] = item[0];
         this.updateNameTree(item[0], banknum);
-        this.bankInfo[item[0]] = [ item[1], item[2] ];
+        this.bankInfo[item[0]] = [ item[1], item[2], item[3] ];
       };
 
       this.getBankNames = function(startbank, count, getMore) {
@@ -522,7 +526,7 @@ span.emptySlot {
 <div class="slotContent" id="slot1">Unknown</div>  
 </div>
 
-<p>Ideally an image plus text underneath (or maybe even drawn over).  Tap/click on a slot to change its contents.
+<p>Tap/click on a slot to change its contents.
 <hr>
 
 <h1>Query state</h1>
