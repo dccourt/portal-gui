@@ -35,8 +35,20 @@ XXX Requires license etc.
         // stick them into <div.slotContents>, replacing existing content.
         var contents = "";
         var slotNum = 1;
+        var extraClass = '';
+        var extraDivOpen = '';
+        var extraDivClose = '';
+        // Group LEGO and Disney in columns of 3
+        if (Portal.mode != Portal.MODE_SKYLANDERS) {
+          extraClass = ' slotVertical';
+          extraDivOpen = "<div class='slotDividerWrapper'>";
+          extraDivClose = "</div>";
+        }
         slotarray.forEach(function(item) {
-          var displayText = "<span class='emptySlot'>+</span>";
+          if (slotNum % 3 == 1) {
+            contents += extraDivOpen;
+          }
+          var displayText = "<span class='emptySlot" + extraClass +"'>+</span>";
           if (item != 0) {
             if (item in this.bankNames) {
               var bankName = bankNames[item];
@@ -57,9 +69,12 @@ XXX Requires license etc.
               displayText = 'Bank ' + item;
             }
           }
-          var div = "<div class='slotContent' id='slot" + slotNum + "' data-slotnum='" + slotNum + "'>" + displayText + "</div>";
+          var div = "<div class='slotContent" + extraClass +"' id='slot" + slotNum + "' data-slotnum='" + slotNum + "'>" + displayText + "</div>";
           contents += div;
           slotNum ++;
+          if (slotNum % 3 == 1) {
+            contents += extraDivClose;
+          }
         });
         $('#slotContents').html(contents);
         $('.slotContent').click(function(event) {
@@ -481,9 +496,23 @@ XXX Requires license etc.
     height: 150px;
     vertical-align: bottom;
 }
+.slotVertical {
+  display: block !important;
+  margin: 0 auto 10px auto;
+}
+.slotDividerWrapper {
+  display: inline-block;
+  float: left;
+  margin: 0px;
+  padding: 0px;
+  width: 30%;
+}
 span.emptySlot {
   font-size: 150px;
   color: lightgray;
+}
+.clear {
+  clear: both;
 }
 #bankchooser #options li {
   list-style: none;
@@ -526,7 +555,7 @@ span.emptySlot {
 <div class="slotContent" id="slot1">Unknown</div>  
 </div>
 
-<p>Tap/click on a slot to change its contents.
+<p class='clear'>Tap/click on a slot to change its contents.
 <hr>
 
 <h1>Query state</h1>
