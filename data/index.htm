@@ -61,10 +61,14 @@ XXX Requires license etc.
                 // We have LEM data available.  For now, just display under the text.
                 displayText = displayText + "<br/>" + bankInfo[1].replace(/\~/g, ' ');
               }
+              var imgSrc;
               if (bankInfo[2]) {
                 // We have an image available.
-                displayText = "<img src='/images/" + Portal.IMG_DIR[Portal.mode] + "/" + bankInfo[0] + ".jpg'>" + displayText;
+                imgSrc = '/images/' + Portal.IMG_DIR[Portal.mode] + '/' + bankInfo[0] + '.jpg';
+              } else {
+                imgSrc = '/images/default.png';
               }
+              displayText = "<img src='" + imgSrc + "'>" + displayText;
             } else {
               displayText = 'Bank ' + item;
             }
@@ -488,13 +492,17 @@ XXX Requires license etc.
   <style>
 .portal-data { font-weight: bold; }   
 .slotContent {
-    display: inline-block;
-    margin: 5px;
-    width: 150px;
-    text-align: center;
-    border: 1px solid #AAA;
-    height: 150px;
-    vertical-align: bottom;
+  display: inline-block;
+  margin: 5px;
+  width: 150px;
+  text-align: center;
+  border: 1px solid #AAA;
+  height: 200px;
+  vertical-align: bottom;
+  line-height: 1.3em;
+}
+.slotContent img {
+  width: 100%;
 }
 .slotVertical {
   display: block !important;
@@ -509,6 +517,7 @@ XXX Requires license etc.
 }
 span.emptySlot {
   font-size: 150px;
+  line-height: 1.2em;
   color: lightgray;
 }
 .clear {
