@@ -9,7 +9,7 @@ XXX Requires license etc.
   <meta http-equiv="Content-type" content="text/html; charset=utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NFC Portal Control</title>
-  <script type="text/javascript" src="static/jquery-3.4.0.min.js"></script>
+  <script type="text/javascript" src="static/head.js"></script>
   <script type="text/javascript">
 
     // Methods for updating the displayed UI.
@@ -32,7 +32,7 @@ XXX Requires license etc.
       this.showSlotContents = function(slotarray) {
         // We expect an array of ints indicating bank IDs.
         // 0 indicates empty.
-        // We build up an array of <div.slotContent> objects, then 
+        // We build up an array of <div.slotContent> objects, then
         // stick them into <div.slotContents>, replacing existing content.
         var contents = "";
         var slotNum = 1;
@@ -105,7 +105,7 @@ XXX Requires license etc.
           stop: function() { UI.dragInProcess = false; }
         });
 
-        // Use start/stop events on the dragger to 
+        // Use start/stop events on the dragger to
         // avoid doing the click event during.
 
         $('.slotContent.emptySlot').droppable({
@@ -118,7 +118,7 @@ XXX Requires license etc.
             var targetSlotNum = $(this).attr('data-slotnum');
             var srcSlotNum = ui.draggable.attr('data-slotnum');
             console.log("dropped from " + srcSlotNum + " to " + targetSlotNum);
-            // Act on the dropped item.  Assume that the portal 
+            // Act on the dropped item.  Assume that the portal
             // will clear the old slot.
             var srcBankNum = Portal.slotContents[srcSlotNum - 1];
             console.log("Bank ID:" + srcBankNum);
@@ -145,7 +145,7 @@ XXX Requires license etc.
 
       return this;
     }());
-    
+
     var Portal = (function() {
       // Constants ----------------
       this.MODE_UNKNOWN = 0;
@@ -166,7 +166,7 @@ XXX Requires license etc.
       var mode = this.MODE_UNKNOWN;
       var pollHandle = 0;
       var bankNameHandle = 0;
-      
+
       // Public state
       this.bankNames = [];
       this.slotContents = [];
@@ -178,18 +178,18 @@ XXX Requires license etc.
       //   "Trap Team": {
       //     "Traps": {
       //       "Fire": 1,  // Trap Team/Traps/Fire = bank 1
-      //     },  
+      //     },
       //     "Characters": {
-      //       "Kaos": 2  
+      //       "Kaos": 2
       //     }
       //   }
       // }
       this.bankNameTree = {};
       // Map from bank name to [UID, LEM, gotimg]
       this.bankInfo = {};
-  
+
       // Methods ------------------
-      // Sometimes we get presented with a JSON string literal rather 
+      // Sometimes we get presented with a JSON string literal rather
       // than JSON object.  Force to object.
       this.forceJSON = function(jsonData) {
           console.log(jsonData);
@@ -199,7 +199,7 @@ XXX Requires license etc.
           }
           return jsonData;
       }
-    
+
       // Respond to JSON object describing current state.
       this.updateState = function(jsonData) {
         jsonData = this.forceJSON(jsonData);
@@ -214,7 +214,7 @@ XXX Requires license etc.
           } else if (Portal.version.indexOf("Disney") != -1) {
             newMode = Portal.MODE_DISNEY;
           } else {
-            newMode = Portal.MODE_UNKNOWN;    
+            newMode = Portal.MODE_UNKNOWN;
           }
           console.log("Curr mode:" + newMode);
           if (newMode != Portal.mode) {
@@ -236,13 +236,13 @@ XXX Requires license etc.
           UI.showSlotContents(jsonData['slotcontents']);
         }
       };
-      
+
       this.pollSlots = function() {
         App.sendRequest('queryslots', this.processSlotData);
       };
-      
+
       this.updateNameTree = function(name, banknum) {
-        // Builds updates to the bank name tree - 
+        // Builds updates to the bank name tree -
         // see bankNameTree for details of structure.
 
         // Tokenise name on '~'
@@ -257,7 +257,7 @@ XXX Requires license etc.
           tree = tree[token];
         });
 
-        // Now we're ready to add the leaf, which is just 
+        // Now we're ready to add the leaf, which is just
         // the bank number.
         tree[leaftoken] = banknum;
       };
@@ -271,7 +271,7 @@ XXX Requires license etc.
 
       this.getBankNames = function(startbank, count, getMore) {
         if (typeof getMore === 'undefined') getMore = false;
-        
+
         App.sendRequest('bankinfo?startbank=' + startbank + '&count=' + count + "&imgdir=" + Portal.IMG_DIR[Portal.mode], function(jsonData) {
           jsonData = forceJSON(jsonData);
           var baseCacheKey = "mode" + Portal.mode + "_bankinfo";
@@ -318,7 +318,7 @@ XXX Requires license etc.
         }
         return gotCache;
       };
-      
+
       this.startFetchingBankNames = function() {
         this.bankNames = [];
         this.stopBankNames = false;
@@ -337,13 +337,13 @@ XXX Requires license etc.
       this.stopPolling = function() {
         window.clearTimeout(pollHandle);
       };
-      
+
       this.refreshResponse = function(jsonData) {
         this.updateState(jsonData);
       };
 
-      // Poll response is like a refresh response, but with 
-      // scheduling of another poll in the future.      
+      // Poll response is like a refresh response, but with
+      // scheduling of another poll in the future.
       this.pollResponse = function(jsonData) {
         var pollDelay = this.pollInterval;
         // Dragging and polling don't play well together due to
@@ -375,7 +375,7 @@ XXX Requires license etc.
       this.refreshSlots = function() {
         App.sendRequest('querystate', this.refreshResponse);
       };
-      
+
       this.setPortalMode = function(mode) {
         App.sendRequest('setportalmode?mode=' + mode);
         // Interrupt any in-progress name fetch
@@ -385,15 +385,15 @@ XXX Requires license etc.
         // Start fetching the names again
         window.setTimeout(this.populateBankNames, 2000);
       };
-      
+
       this.setSlot = function(slot, bank) {
         App.sendRequest('selectbank?banknum=' + bank + '&targetslot=' + slot, this.refreshSlots);
       };
-      
+
       this.clearSlot = function(slot) {
         App.sendRequest('clearslot?targetslot=' + slot, this.refreshSlots);
       };
-      
+
       return this;
     }());
 
@@ -498,7 +498,7 @@ XXX Requires license etc.
           App.chooserBreadcrumbs.push(optionText);
           App.populateOptions(tree);
         } else {
-          // They've selected a leaf in the tree - which has 
+          // They've selected a leaf in the tree - which has
           // resolved to a bank number.  Put it in the slot.
           Portal.setSlot(App.chooserSlot, tree);
           UI.hideBankChooser();
@@ -532,17 +532,16 @@ XXX Requires license etc.
       // Update state immediately, then background poll regularly.
       // Once first poll is successful, we'll start querying for bank info.
       Portal.pollState();
-      
+
       // Prepare modal dialog.
       $('.modalContent').iziModal();
     });
-    
+
   </script>
-  <link rel="stylesheet" href="static/iziModal.min.css">
-  <link rel="stylesheet" href="static/jquery-ui.css">
+  <link rel="stylesheet" href="static/combined.css">
   <!-- inline styles because ESP web server doesn't like lots of simultaneous requests -->
   <style>
-.portal-data { font-weight: bold; }   
+.portal-data { font-weight: bold; }
 .slotContent {
   display: inline-block;
   margin: 5px;
@@ -613,7 +612,7 @@ span.emptySlotInner {
 
 <h1>Figures present:</h1>
 <div id="slotContents">
-<div class="slotContent" id="slot1">Unknown</div>  
+<div class="slotContent" id="slot1">Unknown</div>
 </div>
 
 <p class='clear'>Tap/click on a slot to change its contents.
@@ -649,7 +648,6 @@ span.emptySlotInner {
   <hr>
   <p>&nbsp;Or <a href='#' id='clearTheSlot' onclick='javascript:App.clearCurrentSlot();'>Clear this slot</a>
 </div>
-<script src="static/iziModal.min.js" type="text/javascript"></script>
-<script src="static/jquery-ui.js" type="text/javascript"></script>
+<script src="static/tail.js" type="text/javascript"></script>
 </body>
 </html>
