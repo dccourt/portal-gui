@@ -346,8 +346,8 @@ XXX Requires license etc.
       // scheduling of another poll in the future.      
       this.pollResponse = function(jsonData) {
         var pollDelay = this.pollInterval;
-        // Dragging and polling don't play well together due to 
-        // the DOM updates after poll response.  If we're 
+        // Dragging and polling don't play well together due to
+        // the DOM updates after poll response.  If we're
         // currently dragging, then ignore this poll data.  Poll
         // again sooner than we would normally do, though.
         if (UI.dragInProcess) {
@@ -362,8 +362,8 @@ XXX Requires license etc.
       };
 
       this.pollState = function() {
-        // Dragging and polling don't play well together due to 
-        // the DOM updates after poll response.  Delay the poll 
+        // Dragging and polling don't play well together due to
+        // the DOM updates after poll response.  Delay the poll
         // if we're currently dragging.
         if (UI.dragInProcess) {
           window.setTimeout(this.pollState, 100);
