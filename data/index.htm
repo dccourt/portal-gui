@@ -345,14 +345,30 @@ XXX Requires license etc.
       // Poll response is like a refresh response, but with 
       // scheduling of another poll in the future.      
       this.pollResponse = function(jsonData) {
-        this.refreshResponse(jsonData);
-        if (!(Portal.startedBankNames)) {
-          Portal.populateBankNames();
+        var pollDelay = this.pollInterval;
+        // Dragging and polling don't play well together due to 
+        // the DOM updates after poll response.  If we're 
+        // currently dragging, then ignore this poll data.  Poll
+        // again sooner than we would normally do, though.
+        if (UI.dragInProcess) {
+          pollDelay = 100;
+        } else {
+          this.refreshResponse(jsonData);
+          if (!(Portal.startedBankNames)) {
+            Portal.populateBankNames();
+          }
         }
-        pollHandle = window.setTimeout(this.pollState, this.pollInterval);
+        pollHandle = window.setTimeout(this.pollState, pollDelay);
       };
 
       this.pollState = function() {
+        // Dragging and polling don't play well together due to 
+        // the DOM updates after poll response.  Delay the poll 
+        // if we're currently dragging.
+        if (UI.dragInProcess) {
+          window.setTimeout(this.pollState, 100);
+          return;
+        }
         App.sendRequest('querystate', this.pollResponse);
       };
 
