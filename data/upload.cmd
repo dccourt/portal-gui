@@ -9,6 +9,7 @@ if "%1"=="--bankimages" goto bankimages
 if "%1"=="--coreimages" goto coreimages
 if "%1"=="--code" goto code
 if "%1"=="--static" goto static
+if "%1"=="--delete" goto delete
 
 echo USAGE:
 echo   upload --code                                     : upload just root directory code files
@@ -16,6 +17,11 @@ echo   upload --static                                   : upload just static co
 echo   upload --single ^<srcfilename^> [targetfilename]  : upload a single filename
 echo   upload --bankimages ^<subdirectory^>              : upload all files in directory images\^<subdirectory^>
 echo   upload --coreimages                               : upload all non-figure images
+echo   upload --delete ^<path^>                          : delete a file from SPIFFS
+goto end
+
+:delete
+curl -X "DELETE" -F "data=%1" %TARGET%/edit
 goto end
 
 :code
@@ -23,7 +29,7 @@ for %%i in (index.htm) do curl -F "data=@%%i" %TARGET%/edit
 goto end
 
 :static
-for %%i in (static\*.*) do (curl -F "data=@%%i;filename=static/%%~nxi" %TARGET%/edit & echo Done %%i)
+for %%i in (static\*.gz) do (curl -F "data=@%%i;filename=static/%%~nxi" %TARGET%/edit & echo Done %%i)
 goto end
 
 :singlefile
