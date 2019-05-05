@@ -222,15 +222,41 @@ String *optionalStrArg(const char* name, const char* defaultVal) {
   return retval;
 }
 
+// Read from the portal, terminating on any of these conditions:
+// 1. Encountered \r\nOK\r\n
+// 2. Encountered \nERROR\r\n
+// 3. 500ms elapsed.
 String* readPortal() {
+  unsigned long endTime = millis() + 500;
   String *resp = new String("");  
-  while (PORTAL_UART.available() > 0) {
-    delay(3);  //delay to allow buffer to fill
-    if (PORTAL_UART.available() >0) {
-      char c = PORTAL_UART.read();
-//      DEBUG(c);
-      *resp += c;
+  bool gotCR = false;
+  bool terminated = false;
+  while (millis() < endTime) {
+    if (PORTAL_UART.available() > 0) {
+      char ch = PORTAL_UART.read();
+      *resp += ch;
+
+      // No need to check for terminator if we've not had a CR yet.
+      if (gotCR) {
+        int len = resp->length();
+        if ((resp->substring(len - 6) == "\r\nOK\r\n") ||
+            (resp->substring(len - 9) == "\r\nERROR\r\n")) {
+          // Got a terminator.
+          terminated = true;
+          break;
+        }
+      }
+
+      if (ch == '\n') {
+        gotCR = true;
+      }
+    } else {
+      delay(2);  // Allow buffer to fill
     }
+  }
+
+  if (!terminated) {
+    *resp += "\nTIMEOUT";
   }
 
   return resp;
