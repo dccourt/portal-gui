@@ -14,7 +14,7 @@ copy /y %JQUI%\jquery-ui%MIN%.js            .\jquery-ui.js
 
 echo Processing JS...
 REM /b avoids appending an EOF character
-copy iziModal.min.js+jquery-ui.js tail.js /b
+copy iziModal.min.js+jquery-ui.js+jquery.ui.touch-punch.min.js tail.js /b
 copy jquery-3.4.0.min.js head.js /b
 
 call :compressCopy tail.js
@@ -31,9 +31,9 @@ copy /y tail.js.gz built\
 copy /y combined.css.gz built\
 
 REM Save the output suitable for web testing
-copy /y head.js ..\static\
-copy /y tail.js ..\static\
-copy /y combined.css ..\static\
+copy /y head.js ..\data\static\
+copy /y tail.js ..\data\static\
+copy /y combined.css ..\data\static\
 
 goto end
 
