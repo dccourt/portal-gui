@@ -6,8 +6,8 @@
  *
  */
 
-// On first boot, look for wifi AP called "PortalManager".  Connect to it, 
-// then request page http://portal/wifi.htm .  Choose to either connect to a 
+// On first boot, look for wifi AP called "PortalManager".  Connect to it,
+// then request page http://portal/wifi.htm .  Choose to either connect to a
 // local access point, or continue in AP mode (portal continues to act as an AP).
 // Once connected in non-AP mode, need to find its IP address.
 // From Windows, open Explorer and browse to Network, should see PortalManager icon, double-click to open web.
@@ -24,14 +24,14 @@
 #include <WiFiUdp.h>
 #include <FS.h>
 #include <DNSServer.h>
-#include <EasySSDP.h> 
+#include <EasySSDP.h>
 #include <ArduinoJson.h>
 
 // Debug output will be TX-only on pin D4 (WeMOS D1 MINI)
 #define DBG_OUTPUT_PORT Serial1
 
 // UART used to communicate with the portal emulator
-// We use this in 'pin-swapped' mode, so this corresponds to 
+// We use this in 'pin-swapped' mode, so this corresponds to
 // D7 (RX) and D8 (TX) on WeMOS D1 MINI.
 #define PORTAL_UART Serial
 
@@ -46,7 +46,7 @@ PersWiFiManager persWM(server, dnsServer);
 //holds the current upload
 File fsUploadFile;
 
-// Allow reasonable default maxima - we'll actually dynamically 
+// Allow reasonable default maxima - we'll actually dynamically
 // determine these over time.
 int currNumSlots = 9;
 int currNumBanks = 1000;
@@ -140,7 +140,7 @@ void handleFileCreate(){
 
 void handleFileList() {
   if(!server.hasArg("dir")) {server.send(500, "text/plain", "BAD ARGS"); return;}
-  
+
   String path = server.arg("dir");
   DEBUG_LINE("handleFileList: " + path);
   Dir dir = SPIFFS.openDir(path);
@@ -158,7 +158,7 @@ void handleFileList() {
     output += "\"}";
     entry.close();
   }
-  
+
   output += "]";
   server.send(200, "text/json", output);
 }
@@ -173,10 +173,10 @@ int optionalIntArg(const char *name, int defaultVal) {
   return retval;
 }
 
-// Enforce supply of an integer argument within a range, sends 500 response if bad/missing and 
+// Enforce supply of an integer argument within a range, sends 500 response if bad/missing and
 // returns one less than the minimum.
 int mandatoryIntArg(const char* name, int min, int max) {
-  if (!server.hasArg(name)) { 
+  if (!server.hasArg(name)) {
     String errtext = String("MISSING ") + name + " ARG";
     server.send(500, "text/plain", errtext);
     return (min - 1);
@@ -193,12 +193,12 @@ int mandatoryIntArg(const char* name, int min, int max) {
 // Enforce supply of an string argument, send 500 response if bad/missing and returns NULL
 // Caller must delete the returned value after use.
 String *mandatoryStrArg(const char* name) {
-  if (!server.hasArg(name)) { 
+  if (!server.hasArg(name)) {
     String errtext = String("MISSING ") + name + " ARG";
     server.send(500, "text/plain", errtext);
     return NULL;
   }
-  
+
   String argVal = server.arg(name);
   DEBUG_LINE(String("arg  ") + name + "='" + argVal + "'");
 
@@ -228,7 +228,7 @@ String *optionalStrArg(const char* name, const char* defaultVal) {
 // 3. 500ms elapsed.
 String* readPortal() {
   unsigned long endTime = millis() + 500;
-  String *resp = new String("");  
+  String *resp = new String("");
   bool gotCR = false;
   bool terminated = false;
   while (millis() < endTime) {
@@ -306,7 +306,7 @@ void clearSlot() {
   if (slotnum < 1) return;
 
   String cmd = String("AT+SLOT=") + slotnum + ",0";
-  String *resp = sendPortalCommand(cmd);  
+  String *resp = sendPortalCommand(cmd);
   server.send(200, "text/plain", *resp);
   delete resp;
 }
@@ -318,22 +318,22 @@ void sendLiteral() {
   if (cmd == NULL) return;
 
   String fullcmd = String("AT+") + *cmd;
-  String *resp = sendPortalCommand(fullcmd);  
+  String *resp = sendPortalCommand(fullcmd);
   server.send(200, "text/plain", *resp);
   delete resp;
   delete cmd;
 }
 
 String getSlotDetails() {
-  String *resp = sendPortalCommand("AT+SLOTS?");  
+  String *resp = sendPortalCommand("AT+SLOTS?");
   // A valid response looks like "+SLOTS: 1,2,0,0,0,0\r\nOK\r\n".
   DEBUG(*resp);
-  
+
   if (resp->substring(0, 8) != "+SLOTS: ") {
     server.send(500, "text/plain", String("Bad portal response: ") + *resp + ":'" + resp->substring(0,8) + "'");
     return "";
   }
-  
+
   // Allow for 12 slots.
   const int capacity = JSON_ARRAY_SIZE(12);
   StaticJsonDocument<capacity> doc;
@@ -353,7 +353,7 @@ String getSlotDetails() {
   }
 
   String output = "";
-  serializeJson(doc, output);  
+  serializeJson(doc, output);
 
   delete resp;
   return output;
@@ -398,7 +398,7 @@ int getNumSlots() {
 void queryState() {
   const int jsonsize = JSON_OBJECT_SIZE(4) + 70; // Allow 70 chars for version info and slot contents
   StaticJsonDocument<jsonsize> doc;
-  
+
   String *resp = sendPortalCommand("AT+VER?");
   // Just strip the initial "+VER: " prefix, and trailing "\r\nOK\r\n".
   String part = resp->substring(6, resp->length() - 6);
@@ -424,7 +424,7 @@ void selectBank() {
 
   String cmd = String("AT+SLOT=") + slotnum + "," + banknum;
   String *resp = sendPortalCommand(cmd);
-  
+
   server.send(200, "text/plain", *resp);
 
   delete resp;
@@ -435,7 +435,7 @@ void selectBank() {
 // If fetching just one, return as raw string, otherwise return as JSON array.
 // ARGS: startbank, count (optional, default=1)
 void getBankNames() {
-  int maxBank = getNumBanks();  
+  int maxBank = getNumBanks();
   int banknum = mandatoryIntArg("startbank", 1, maxBank);
   if (banknum < 1) { return; }
   int count = optionalIntArg("count", 1);
@@ -463,7 +463,7 @@ void getBankNames() {
 // Returned as a JSON array of arrays : the sub-arrays contain name + UID + L/E/M data + whether we have an image for this UID (1 or 0)
 // ARGS: startbank, imgdir (which dir to look for images in - optional), count (optional, default=1)
 void getBankInfo() {
-  int maxBank = getNumBanks();  
+  int maxBank = getNumBanks();
   int banknum = mandatoryIntArg("startbank", 1, maxBank);
   if (banknum < 1) { return; }
   int count = optionalIntArg("count", 1);
@@ -524,7 +524,7 @@ void getBankInfo() {
       }
     }
     innerdoc.add(gotImg);
-    
+
     delete resp;
   }
 
@@ -541,8 +541,10 @@ void setup ( void ) {
 
   PORTAL_UART.begin( 115200 );
   PORTAL_UART.swap();
-  
+
   SPIFFS.begin();
+
+  WiFi.hostname(DEVICE_NAME);
 
   //optional code handlers to run everytime wifi is connected...
   persWM.onConnect([]() {
@@ -565,7 +567,7 @@ void setup ( void ) {
   persWM.setApCredentials(DEVICE_NAME);
   persWM.setConnectNonBlock(true);
   persWM.begin();
-  
+
   // SUPPORTED URLs:
 
   // ----- File management
@@ -589,7 +591,7 @@ void setup ( void ) {
   server.on ( "/selectbank", selectBank );
   server.on ( "/queryslots", querySlots );
   server.on ( "/querystate", queryState );
-  server.on ( "/clearslot", clearSlot );  
+  server.on ( "/clearslot", clearSlot );
   server.on ( "/banknames", getBankNames );
   server.on ( "/bankinfo", getBankInfo );
 
