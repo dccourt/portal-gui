@@ -12,6 +12,20 @@ XXX Requires license etc.
   <script type="text/javascript" src="static/head.js"></script>
   <script type="text/javascript">
 
+    // Shims
+    // First, checks if it isn't implemented yet.
+    if (!String.prototype.format) {
+      String.prototype.format = function() {
+        var args = arguments;
+        return this.replace(/{(\d+)}/g, function(match, number) {
+          return typeof args[number] != 'undefined'
+            ? args[number]
+            : match
+          ;
+        });
+      };
+    }
+
     // Methods for updating the displayed UI.
     var UI = (function() {
       this.dragInProcess = false;
@@ -42,13 +56,21 @@ XXX Requires license etc.
         // Group LEGO and Disney in columns of 3
         if (Portal.mode != Portal.MODE_SKYLANDERS) {
           extraClass = ' slotVertical';
-          extraDivOpen = "<div class='slotDividerWrapper'>";
+          extraDivOpen = "<div class='slotDividerWrapper' id='{0}'>";
           extraDivClose = "</div>";
         }
         slotarray.forEach(function(item) {
           var populatedClass = ' emptySlot';
           if (slotNum % 3 == 1) {
-            contents += extraDivOpen;
+            var slotName;
+            if (slotNum < 3) {
+              slotName = 'C';
+            } else if (slotNum < 6) {
+              slotName = 'L';
+            }  else {
+              slotName = 'R';
+            }
+            contents += extraDivOpen.format(slotName);
           }
           var displayText = "<span class='emptySlotInner" + extraClass +"'>+</span>";
           if (item != 0) {
@@ -561,10 +583,15 @@ XXX Requires license etc.
 }
 .slotDividerWrapper {
   display: inline-block;
-  float: left;
   margin: 0px;
   padding: 0px;
-  width: 30%;
+  width: 33%;
+}
+.slotDividerWrapper#L {
+  float: left;
+}
+.slotDividerWrapper#R {
+  float: right;
 }
 span.emptySlotInner {
   font-size: 150px;
