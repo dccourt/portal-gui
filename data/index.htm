@@ -154,11 +154,28 @@ XXX Requires license etc.
       };
 
       this.showBankChooser = function() {
-        $('#bankchooser').iziModal('open');
+        $('#bankChooser').iziModal('open');
       };
 
       this.hideBankChooser = function() {
-        $('#bankchooser').iziModal('close');
+        $('#bankChooser').iziModal('close');
+      };
+
+      this.setPortalUnreachable = function() {
+        // Looks like a bug in iziModal that 'open' will close an already-open modal.
+        // So check state first.
+        var modal = $('#portalUnreachable');
+        var state = modal.iziModal('getState');
+        // Expect 'open' or 'opening' if we've already called it to open.
+        if (state.indexOf('open') != 0) {
+          modal.iziModal('open');
+        }
+        // We want to poll in the background to see whether it comes back.
+        window.setTimeout(Portal.pollState, 1000);
+      };
+
+      this.setPortalReachable = function() {
+        $('#portalUnreachable').iziModal('close');
       };
 
       this.showCurrentChooserSlot = function(slotnum) {
@@ -391,11 +408,11 @@ XXX Requires license etc.
           window.setTimeout(this.pollState, 100);
           return;
         }
-        App.sendRequest('querystate', this.pollResponse);
+        App.sendRequest('querystate', this.pollResponse, true);
       };
 
       this.refreshSlots = function() {
-        App.sendRequest('querystate', this.refreshResponse);
+        App.sendRequest('querystate', this.refreshResponse, true);
       };
 
       this.setPortalMode = function(mode) {
@@ -425,17 +442,36 @@ XXX Requires license etc.
       this.chooserSlot = 1;
 
       // XXX Consider replacing with jQuery simplified version.
-      this.sendRequest = function(url, oncomplete){
+      this.sendRequest = function(url, oncomplete, setCacheBreaker){
         var xh = new XMLHttpRequest();
+        if (setCacheBreaker) {
+          // Note : assumes we have no URL parameters, will need adapting if we
+          // need a usecase with existing parameters.
+          url += "?cb=" + Date.now();
+        }
         console.log("send URL " + url);
         xh.onreadystatechange = function(){
           if (xh.readyState == 4){
             if(xh.status != 200) {
-              alert("ERROR:" + xh.status + " - " + xh.response);
+              // Ignore status = 0 - that will be handled in a moment by onerror
+              if (xh.status != 0) {
+                alert("ERROR:" + xh.status + " - " + xh.response);
+                console.log(xh);
+              }
             } else if (oncomplete) {
+              UI.setPortalReachable();
               oncomplete(xh.response);
             }
           }
+        };
+        xh.onerror = function(e) {
+          console.log("ERRORmethod: phase: " + e.eventPhase);
+          if (e.eventPhase == 2) {
+            // This appears to be the characteristic of an unreachable
+            // end-point.
+            UI.setPortalUnreachable();
+          }
+          console.log(e);
         };
         xh.open("GET", url, true);
         xh.send(null);
@@ -483,9 +519,9 @@ XXX Requires license etc.
           crumbLevel --;
         }
 
-        $('#bankchooser #options').html(htmlStr);
-        $('#bankchooser #options li.option a').click(this.optionSelected);
-        $('#bankchooser #options li.crumb a').click(this.crumbSelected);
+        $('#bankChooser #options').html(htmlStr);
+        $('#bankChooser #options li.option a').click(this.optionSelected);
+        $('#bankChooser #options li.crumb a').click(this.crumbSelected);
       };
 
       this.getCurrentTree = function() {
@@ -601,7 +637,7 @@ span.emptySlotInner {
 .clear {
   clear: both;
 }
-#bankchooser #options li {
+#bankChooser #options li {
   list-style: none;
   padding-bottom: 5px;
 }
@@ -661,7 +697,7 @@ span.emptySlotInner {
 <hr>
 
 <!-- Hidden modal : structure to choose a bank for a slot -->
-<div id="bankchooser" class="modalContent"
+<div id="bankChooser" class="modalContent"
   data-iziModal-fullscreen="true"  data-iziModal-title="Change slot contents"
   data-iziModal-icon="icon-home" data-iziModal-transitionIn="comingIn"
   data-iziModal-radius=20
@@ -675,6 +711,16 @@ span.emptySlotInner {
   <hr>
   <p>&nbsp;Or <a href='#' id='clearTheSlot' onclick='javascript:App.clearCurrentSlot();'>Clear this slot</a>
 </div>
+
+<!-- Hidden modal : portal unreachable warning -->
+<div id="portalUnreachable" class="modalContent"
+  data-iziModal-closebutton="false"  data-iziModal-title="Portal Unreachable"
+  data-iziModal-icon="icon-home" data-iziModal-transitionIn="comingIn"
+  data-iziModal-radius=20
+>
+  <p>&nbsp;The portal appears to be offline.  Is it plugged into the console?
+</div>
+
 <script src="static/tail.js?cb=1234" type="text/javascript"></script>
 </body>
 </html>
